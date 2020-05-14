@@ -128,6 +128,16 @@
 					</TooltipPanel>
 					<Panel class="horizontal-separator"/>
 
+					                          
+					<TooltipPanel class="SettingsMenuDropdownContainer" tooltip="#SFUI_Settings_TextureStreaming_Info">
+						<Label text="#SFUI_Settings_TextureStreaming" class="half-width"/>
+						<CSGOSettingsEnumDropDown onuserinputsubmit="SettingsMenuShared.VideoSettingsOnUserInputSubmit()" class="PopupButton White" id="TextureStreaming">
+							<Label text="#SFUI_Settings_Disabled" value="0" id="texturestreaming0" />
+							<Label text="#SFUI_Settings_Enabled" value="1" id="texturestreaming1"/>
+						</CSGOSettingsEnumDropDown>
+					</TooltipPanel>
+					<Panel class="horizontal-separator"/>
+					
 					                      
 					<TooltipPanel class="SettingsMenuDropdownContainer" tooltip="#SFUI_Settings_CPUDetail_Info">
 						<Label text="#SFUI_Settings_Effect_Detail" class="half-width"/>
