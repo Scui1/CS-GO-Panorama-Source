@@ -43,13 +43,13 @@
 					<TooltipPanel id="MainMenuMovieSceneSelector" class="SettingsMenuDropdownContainer" tooltip="#GameUI_MainMenuMovieScene_Tooltip">
 						<Label text="#GameUI_MainMenuMovieScene" class="half-width"/>
 						<CSGOSettingsEnumDropDown class="PopupButton White" convar="ui_mainmenu_bkgnd_movie">
+								<Label text="#SFUI_Map_de_ancient" value="ancient" id="ui_mainmenu_bkgnd_movie_ancient"/>
 								<Label text="#SFUI_Map_de_anubis" value="anubis" id="ui_mainmenu_bkgnd_movie_anubis"/>
 								<Label text="#SFUI_Map_dz_blacksite" value="blacksite" id="ui_mainmenu_bkgnd_movie_blacksite"/>
 								<Label text="#SFUI_Map_de_cbble" value="cbble" id="ui_mainmenu_bkgnd_movie_cbble"/>
-								<Label text="#SFUI_Map_de_mutiny" value="mutiny" id="ui_mainmenu_bkgnd_movie_mutiny"/>
+								<Label text="#SFUI_Map_dz_frostbite" value="frostbite" id="ui_mainmenu_bkgnd_movie_frostbite"/>
 								<Label text="#SFUI_Map_de_nuke" value="nuke" id="ui_mainmenu_bkgnd_movie_nuke"/>
 								<Label text="#SFUI_Map_coop_kasbah" value="sirocco_night" id="ui_mainmenu_bkgnd_movie_sirocco_night"/>
-								<Label text="#SFUI_Map_de_swamp" value="swamp" id="ui_mainmenu_bkgnd_movie_swamp"/>
 								<Label text="#SFUI_Map_de_vertigo" value="vertigo" id="ui_mainmenu_bkgnd_movie_vertigo"/>
 								<Label text="#SFUI_Map_random" value="random" id="ui_mainmenu_bkgnd_movie_random"/>
 						</CSGOSettingsEnumDropDown>
@@ -263,6 +263,16 @@
 						<CSGOSettingsEnumDropDown convar="triple_monitor_mode" class="PopupButton White" id ="TripleMonitorDropdown">
 							<Label text="#SFUI_Settings_Disabled" value="0" id="triplemonitor0" />
 							<Label text="#SFUI_Settings_Enabled" value="1" id="triplemonitor1"/>
+						</CSGOSettingsEnumDropDown>
+					</TooltipPanel>
+
+					                     
+					<TooltipPanel class="SettingsMenuDropdownContainer" tooltip="#SFUI_Settings_UberShader_Info">
+						<Label text="#SFUI_Settings_UberShader" class="half-width"/>
+						<CSGOSettingsEnumDropDown onuserinputsubmit="SettingsMenuShared.VideoSettingsOnUserInputSubmit()" class="PopupButton White" id ="UberShader">
+							<Label text="#SFUI_Settings_Disabled" value="0" id="ubershader0" />
+							<Label text="#SFUI_Settings_Enabled" value="1" id="ubershader1"/>
+							<Label text="#SFUI_Settings_Choice_Autodetect" value="9999999" id="ubershader2"/>
 						</CSGOSettingsEnumDropDown>
 					</TooltipPanel>
 
