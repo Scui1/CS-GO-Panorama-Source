@@ -171,6 +171,7 @@ var OperationUtil = ( function () {
 
 		var aRewardDataFields = [
 			{ objHandle:'points', value: 'points'},
+			{ objHandle:'flags', value: 'flags'},
 			{ objHandle:'uiOrder', value: 'ui_order'},
 			{ objHandle:'imagePath', value: 'ui_image'},
 			{ objHandle:'imagePathInspect', value: 'ui_image_inspect'},
@@ -300,6 +301,27 @@ var OperationUtil = ( function () {
 		return totalPoints;
 	};
 
+	function _IfOperationEndedGetExtendedSeasonWithRedeemableBalance( bAlwaysShowOperationEndedMessageBox )
+	{
+		var nActiveSeason = 9;                                                                                                                   
+		
+		if ( bAlwaysShowOperationEndedMessageBox )
+		{
+			nActiveSeason = -1;
+		}
+		else
+		{
+			_ValidateOperationInfo( nActiveSeason );
+			if ( m_numRedeemableBalance <= 0 )
+				nActiveSeason = -1;
+		}
+			
+		if ( nActiveSeason < 0 )
+			UiToolkitAPI.ShowGenericPopup( '#op_stars_shop_title', '#op_stars_shop_operation_over', "" );
+			
+		return nActiveSeason;
+	}
+
 	function _OpenPopupCustomLayoutOperationHub ( rewardIdxToSetWhenOpen )
 	{
 		var nActiveSeason = GameTypesAPI.GetActiveSeasionIndexValue();
@@ -322,11 +344,14 @@ var OperationUtil = ( function () {
 
 	function _OpenPopupCustomLayoutOperationStore()
 	{
+		$.DispatchEvent( 'ContextMenuEvent', '' );
+
 		var nActiveSeason = GameTypesAPI.GetActiveSeasionIndexValue();
 		if ( nActiveSeason < 0 )
-			return;
+			nActiveSeason = _IfOperationEndedGetExtendedSeasonWithRedeemableBalance();
 
-		$.DispatchEvent( 'ContextMenuEvent', '' );
+		if ( nActiveSeason < 0 )
+			return;
 
 		var elPanel = UiToolkitAPI.ShowCustomLayoutPopupParameters(
 			'',
@@ -405,9 +430,18 @@ var OperationUtil = ( function () {
 		}
 
 		$.DispatchEvent( 'PlaySoundEffect', 'tab_mainmenu_inventory', 'MOUSE' );
+
+		                                                
+		var nActiveSeason = GameTypesAPI.GetActiveSeasionIndexValue();
+		if ( nActiveSeason < 0 )
+		{
+			_IfOperationEndedGetExtendedSeasonWithRedeemableBalance( true );
+			return;
+		}
+
 		var passId = InventoryAPI.GetActiveSeasonPassItemId();
 
-		if (( m_bPremiumUser || bForceOpenStarsPurchase ))
+		if ( m_bPremiumUser || bForceOpenStarsPurchase )
 		{
 			_OpenStarStore();
 		}

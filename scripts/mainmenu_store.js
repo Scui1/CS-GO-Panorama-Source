@@ -29,17 +29,23 @@ var MainMenuStore = ( function()
 
 		                                                   
 		var nSeasonIndex = GameTypesAPI.GetActiveSeasionIndexValue();
+		nSeasonIndex = null;                                                                                              
 		OperationUtil.ValidateOperationInfo( nSeasonIndex );
 		var oStatus = OperationUtil.GetOperationInfo();
 
 		if ( nSeasonIndex && nSeasonIndex > 0 )
 		{
-			m_elStore.SetDialogVariable( "operation_name", $.Localize( "#" + GameTypesAPI.GetActiveSeasionCodeName() + '_name' ) );
+			var opname = GameTypesAPI.GetActiveSeasionCodeName();
+			if ( !opname )
+			{
+				opname = 'op' + ( nSeasonIndex + 1 );
+			}
+			m_elStore.SetDialogVariable( "operation_name", $.Localize( "#" + opname + '_name' ) );
 		}
 
 		if( OperationUtil.ValidateCoinAndSeasonIndex( nSeasonIndex, oStatus.nCoinRank ) )
 		{
-			itemsByCategory.operation = _OperationStoreSetupObj();
+			itemsByCategory.operation = _OperationStoreSetupObj( nSeasonIndex );
 		}
 
 		                                       
@@ -223,13 +229,14 @@ var MainMenuStore = ( function()
 		return tournament;
 	};
 
-	var _OperationStoreSetupObj = function()
+	var _OperationStoreSetupObj = function( nSeasonIndex )
 	{
 		var operation = [
 			{
 				snippet_name: "OperationStore",
 				load_func: function ( elpanel ) {
 
+					OperationUtil.ValidateOperationInfo( nSeasonIndex );
 					var aRewards = OperationUtil.GetRewardsData();
 					
 					function GetRandomItem ( aItemList )
@@ -1040,7 +1047,7 @@ var MainMenuStore = ( function()
 		                                                                               
 		                                                                               
 		  
-		var tabsorder = [ 'coupons', 'proteams', 'operation',
+		var tabsorder = [ 'proteams', 'operation', 'coupons',
 			'tournament', 'prime', 'newstore',
 			'store', 'keys', 'market' ];
 
@@ -1056,11 +1063,20 @@ var MainMenuStore = ( function()
 		tabelements.forEach( fnMoveToFront );
 		tabelements.reverse();
 
-		var nCategoryIdx = MyPersonaAPI.GetAccountCategory( 'store1' );
-		if ( nCategoryIdx > 0 && nCategoryIdx < tabelements.length )
-		{
-			fnMoveToFront( tabelements[nCategoryIdx] );
-		}
+		  
+		                                                                         
+		                                                               
+		                                                            
+		 
+			                                           
+		 
+		  
+
+		                                                                                                                  
+		var nCategoryIdx = Math.floor( Math.random() * 3 );
+		fnMoveToFront( tabelements[nCategoryIdx] );
+		var nCategoryIdx2 = Math.floor( Math.random() * 2 );
+		fnMoveToFront( tabelements[ nCategoryIdx2 + ( ( nCategoryIdx2 >= nCategoryIdx ) ? 1 : 0 ) ] );
 
 		_SetDefaultTabActive( elParent.Children()[0] )
 	};
