@@ -135,7 +135,8 @@ var PlayMenu = ( function()
 		elPrimeButton.SetPanelEvent( 'onactivate', function()
 		{
 			UiToolkitAPI.HideTextTooltip();
-			_ApplySessionSettings();
+			                          
+			ApplyPrimeSetting();
 		} );
 
 		                         
@@ -164,22 +165,36 @@ var PlayMenu = ( function()
 			$.DispatchEvent( 'PlaySoundEffect', 'mainmenu_press_GO', 'MOUSE' );
 			btnStartSearch.AddClass( 'pressed' );
 
+	  		                                 
+
 			if ( m_isWorkshop )
 			{
 				_DisplayWorkshopModePopup();
 			}
 			else
 			{
+
+				                                                                                                                                                       
+				if ( !_CheckContainerHasAnyChildChecked( _GetMapListForServerTypeAndGameMode( m_activeMapGroupSelectionPanelID ) ) )
+				{
+					_NoMapSelectedPopup();
+
+					btnStartSearch.RemoveClass( 'pressed' );
+
+					return;
+				}
+
 				let settings = ( LobbyAPI.IsSessionActive() && !_GetTournamentOpponent() ) ? LobbyAPI.GetSessionSettings() : null;
 				let stage = _GetTournamentStage();
-				if ( ( !stage || stage === '' )
-					&& settings && settings.game && settings.options
-					&& settings.options.server !== 'listen'
-					&& settings.game.mode === 'competitive'
-					&& settings.game.mapgroupname.includes( 'mg_lobby_mapveto' ) )
-				{
-					stage = '1';
-				}
+				                                                                                   
+				                                  
+				   	                                                
+				   	                                       
+				   	                                       
+				   	                                                              
+				    
+				   	            
+				    
 
 				  
 				                                     
@@ -231,7 +246,27 @@ var PlayMenu = ( function()
 
 		                         
 		_ShowNewMatchmakingModePopup();
+
+		                                                                        
+		var strFavoriteMaps = GameInterfaceAPI.GetSettingString( 'ui_playsettings_custom_preset' );
+		if ( strFavoriteMaps === '' )
+		{
+			_SaveMapSelectionToCustomPreset( true );
+		}
+		
 	};
+
+
+	function _NoMapSelectedPopup ()
+	{
+		                                       
+		UiToolkitAPI.ShowGenericPopupOk(
+			$.Localize( '#no_maps_selected_title' ),
+			$.Localize( '#no_maps_selected_text' ),
+			'',
+			function () { },
+			function () { } );
+	}
 
 	var _ShowNewMatchmakingModePopup = function()
 	{
@@ -371,7 +406,6 @@ var PlayMenu = ( function()
 		var strTournament = MyPersonaAPI.GetMyOfficialTournamentName();
 		var isInTournament = isHost && strTeamName != "" && strTournament != "";
 		$.GetContextPanel().SetHasClass( "play-menu__tournament", isInTournament );
-		$.GetContextPanel().SetHasClass( "play-menu__lobbymapveto_activated", bIsOfficialCompetitive && settingsgamemapgroupname.includes( "mg_lobby_mapveto" ) );
 
 		var isSearchingForTournament = bIsOfficialCompetitive && isInTournament;
 
@@ -539,7 +573,7 @@ var PlayMenu = ( function()
 		_UpdateTournamentButton( isHost, isSearching, settings.game.mapgroupname );
 
 		                   
-		_UpdatePrimeBtn( isSearching, isHost, settings.game.prime === 1 ? true : false );
+		_UpdatePrimeBtn( isSearching, isHost );
 		_UpdatePermissionBtnText( settings, isEnabled );
 
 		                             
@@ -604,6 +638,23 @@ var PlayMenu = ( function()
 		return [];
 	};
 
+	function _GetAvailableQuickSelectMapGroups ()
+	{
+		if ( m_isWorkshop )
+			return [];
+		
+		var gameModeCfg = m_gameModeConfigs[ m_gameModeSetting ];
+		if ( gameModeCfg === undefined ) 
+			return [];
+
+		var mapgroup = gameModeCfg.mapgroupsQuickSelectSets;
+
+		if ( mapgroup == undefined || mapgroup == null ) 
+			return [];
+
+		return Object.keys( mapgroup );
+	}
+
 	var _GetMapGroupPanelID = function ( serverType, gameMode, singleSkirmishMapGroup )
 	{
 		var gameModeId = gameMode + ( singleSkirmishMapGroup ? '@' + singleSkirmishMapGroup : '' );
@@ -649,17 +700,15 @@ var PlayMenu = ( function()
 					} );
 				} );
 			}
-		}
+        }
+        
+        _MatchMapSelectionWithQuickSelect();
 
 		if ( _CheckContainerHasAnyChildChecked( _GetMapListForServerTypeAndGameMode( m_activeMapGroupSelectionPanelID )) )
 		{ 
 			_ApplySessionSettings();
 		}
-		else if ( mapGroupNameClicked === 'mg_lobby_mapveto' )
-		{	                                                                                         
-			$.GetContextPanel().SetHasClass( "play-menu__lobbymapveto_activated", false );
-		}
-	}
+	};
 
 	var _ShowActiveMapSelectionTab = function( isEnabled )
 	{
@@ -689,7 +738,173 @@ var PlayMenu = ( function()
 		                                         
 		$( '#WorkshopVisitButton' ).visible = isWorkshop && !m_bPerfectWorld;
 		$( '#WorkshopVisitButton' ).enabled = SteamOverlayAPI.IsEnabled();
+	};
+
+	function _GetMapTileContainer ()
+	{
+		var elMapGroupContainer = $.GetContextPanel().FindChildInLayoutFile( _GetMapGroupPanelID( m_serverSetting, m_gameModeSetting, m_singleSkirmishMapGroup ) );
+		
+		if ( m_gameModeSetting === 'competitive' && _IsValveOfficialServer( m_serverSetting ) )
+			return _GetCreateMapListSection( "comp", elMapGroupContainer );
+		else
+			return elMapGroupContainer;
 	}
+
+
+
+                                                                          
+    function _OnMapQuickSelect ( mgName )
+    {
+                                                  
+        var arrMapsToSelect = _GetMapsFromQuickSelectMapGroup( mgName );
+        var bScrolled = false;
+
+		var prevSelection = _GetSelectedMapsForServerTypeAndGameMode( m_serverSetting, m_gameModeSetting, true );
+		
+		var elMapGroupContainer = _GetMapTileContainer();
+        elMapGroupContainer.Children().forEach( function ( elMapBtn )
+        {
+            var bFound = false;
+
+                                                              
+            if ( mgName === "all" )
+            {
+                bFound = true;
+            }
+            else if ( mgName === "none" )
+            {
+                bFound = false;
+            }
+            else
+            {
+                arrMapsToSelect.forEach( function ( mapname )
+                {
+                    if ( elMapBtn.GetAttributeString( "mapname", "" ) == mapname )
+                    {
+                        bFound = true;
+                    }
+                } );
+            }
+
+            elMapBtn.checked = bFound;
+
+                                       
+            if ( bFound && !bScrolled )
+            {
+                elMapBtn.ScrollParentToMakePanelFit( 2, false );
+                bScrolled = true;
+            }
+        } );
+
+                                   
+        var newSelection = _GetSelectedMapsForServerTypeAndGameMode( m_serverSetting, m_gameModeSetting, true );
+        if ( prevSelection != newSelection )
+        {
+            $.DispatchEvent( 'PlaySoundEffect', 'submenu_leveloptions_select', 'MOUSE' );
+
+                                         
+            _MatchMapSelectionWithQuickSelect();
+
+            if ( _CheckContainerHasAnyChildChecked( _GetMapListForServerTypeAndGameMode( m_activeMapGroupSelectionPanelID )) )
+            { 
+                _ApplySessionSettings();
+            }
+        }
+    }
+
+
+	                                                                
+	function _ValidateMaps ( arrMapList )
+	{
+		var arrMapTileNames = [];
+
+                                             
+		var arrMapButtons = _GetMapListForServerTypeAndGameMode( m_activeMapGroupSelectionPanelID );
+		arrMapButtons.forEach( elMapTile => arrMapTileNames.push( elMapTile.GetAttributeString( "mapname", "" )));
+
+                                                                     
+		var filteredMapList = arrMapList.filter( strMap => arrMapTileNames.includes( strMap ) );
+
+		return filteredMapList;
+	}
+
+
+    function _GetMapsFromQuickSelectMapGroup ( mgName )
+	{
+        if ( mgName === ( "favorites" ) )
+        {
+            var mapsAsString = GameInterfaceAPI.GetSettingString( 'ui_playsettings_custom_preset' );
+			if ( mapsAsString === '' )
+				return [];
+			else
+			{
+				var arrMapList = mapsAsString.split( ',' );
+				var filteredMapList = _ValidateMaps( arrMapList );
+
+				                      
+				if ( arrMapList.length != filteredMapList.length )
+					GameInterfaceAPI.SetSettingString( 'ui_playsettings_custom_preset', filteredMapList.length > 0 ? filteredMapList.join(',') : "" );
+				
+				return filteredMapList;
+			}
+        }
+        else
+		{
+			var mapsAsObject = GetMGDetails( mgName ) ? GetMGDetails( mgName ).maps : {};
+            return Object.keys( mapsAsObject );
+        }
+    }
+
+                                                                                     
+    function _MatchMapSelectionWithQuickSelect ()
+	{
+                                               
+        var elQuickSelectContainer = $.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionSetsContainer" );
+		if ( !elQuickSelectContainer || m_isWorkshop )
+            return;
+
+        elQuickSelectContainer.Children().forEach( function ( elQuickBtn, index, aMapGroups )
+        {
+                                            
+            var arrQuickSelectMaps = _GetMapsFromQuickSelectMapGroup( elQuickBtn.id );
+
+            var bMatch = true;
+
+                                                                                   
+			var elMapGroupContainer = _GetMapTileContainer();
+
+            for ( var i = 0; i < elMapGroupContainer.Children().length; i++ )
+            {
+                var elMapBtn = elMapGroupContainer.Children()[ i ];
+                var mapName = elMapBtn.GetAttributeString( "mapname", "" );
+
+                if ( elQuickBtn.id == "none" )
+                {
+                    if ( elMapBtn.checked )
+                    {
+                        bMatch = false;
+                        break;
+                    }
+                } else if ( elQuickBtn.id == "all" )
+                {
+                    if ( !elMapBtn.checked )
+                    {
+                        bMatch = false;
+                        break;
+                    }
+                } else
+                {
+                    if ( elMapBtn.checked != ( arrQuickSelectMaps.includes( mapName ) ) )
+                    {
+                        bMatch = false;
+                        break;
+                    }
+                }
+            }
+
+            elQuickBtn.SetHasClass( "match", bMatch );
+        } );
+    }
 
 	var _LazyCreateMapListPanel = function( serverType, gameMode, singleSkirmishMapGroup )
 	{
@@ -779,7 +994,7 @@ var PlayMenu = ( function()
 				{
 					container.AddClass( 'map-selection-list--competitive-section-container' );
 					container.SetAttributeString( 'hassections', 'true' );
-					elSectionContainer = _GetCreateMapListSection( _GetCategoryForMapName( aMapGroups[ index ] ), container );
+					elSectionContainer = _GetCreateMapListSection( 'comp', container );
 				}
 				else
 				{
@@ -813,27 +1028,76 @@ var PlayMenu = ( function()
 		return panelID;
 	};
 
-	var _GetCategoryForMapName = function( mapName )
+    function _PopulateQuickSelectBar ( isSearching , isHost  )
+    {
+                                                                  
+                                       
+        var arrQuickSelectSets = _GetAvailableQuickSelectMapGroups(  );
+        var elQuickSelectContainer = $.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionSetsContainer" );
+		if ( !elQuickSelectContainer )
+            return;
+
+		elQuickSelectContainer.RemoveAndDeleteChildren();
+		
+		if ( m_isWorkshop )
+			return;
+
+        arrQuickSelectSets.forEach( function ( mgName )
+        {
+            var elSetBtn = $.CreatePanel( "Button", elQuickSelectContainer, mgName );
+            elSetBtn.BLoadLayoutSnippet( "QuickSelectionSetButtonSnippet" );
+
+            var oMG = GetMGDetails( mgName );
+            elSetBtn.SetDialogVariable( "quick-selection-set-name", $.Localize( oMG.nameID ) );
+
+            elSetBtn.SetPanelEvent( "onactivate", _OnMapQuickSelect.bind( this, mgName ) );
+        } );
+
+        _MatchMapSelectionWithQuickSelect( );
+		_EnableDisableQuickSelectBtns( isSearching , isHost );
+    }
+
+	function _EnableDisableQuickSelectBtns ( isSearching, isHost )
 	{
-		  
-		                                                                                              
-		  
-		if ( mapName === 'mg_lobby_mapveto' || mapName === 'lobby_mapveto' )
+		var bEnable = !isSearching && isHost;
+
+		var aBtns = $.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionSetsContainer" ).Children();
+		var aOtherBtns = [ 
+			$.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionFavoritesSet" ),
+			$.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectAll" ),
+			$.GetContextPanel().FindChildInLayoutFile( "jsQuickClearAll" ),
+			$.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionSave" )
+		];
+
+		aBtns = aBtns.concat(aOtherBtns);
+		aBtns.forEach( element => {
+			element.enabled = bEnable;
+		});
+	}
+
+	function _SaveMapSelectionToCustomPreset ( bSilent = false )
+    {
+		var selectedMaps = _GetSelectedMapsForServerTypeAndGameMode( m_serverSetting, m_gameModeSetting, true );
+		if ( selectedMaps === "" )
 		{
-			return 'capt';
-		}
-		else
-		{
-			return 'comp';
+  			               
+  				                                                                            
+			
+			_NoMapSelectedPopup();
+
+			return;
 		}
 
-		  
-		  
-		                                                                                                  
-		  
-		                                                                                                                 
-		  
-	};
+        GameInterfaceAPI.SetSettingString( 'ui_playsettings_custom_preset', selectedMaps );
+
+		if ( !bSilent )
+		{
+			$.DispatchEvent( 'PlaySoundEffect', 'UIPanorama.generic_button_press', 'MOUSE' );
+			$.GetContextPanel().FindChildInLayoutFile( "jsQuickSelectionSave" ).TriggerClass( 'save');
+		}
+
+        _MatchMapSelectionWithQuickSelect();
+    }
 
 	var _GetCreateMapListSection = function( type, container )
 	{
@@ -848,12 +1112,6 @@ var PlayMenu = ( function()
 			
 			elSectionContainer.SetHasClass( 'map-selection-list-section--single-column', ( type === 'unranked' ) || ( type === 'capt' ) );
 			elSectionContainer.BLoadLayoutSnippet( "MapListSection" );
-			elSectionContainer.FindChildInLayoutFile( 'play-maps-section-header' ).text = $.Localize( '#play_maps_section_' + type );
-
-			elSectionContainer.FindChildInLayoutFile( 'play-maps-section-header-more-info' ).SetPanelEvent( 'onactivate', function()
-			{
-				UiToolkitAPI.ShowGenericPopup( '#play_maps_section_' + type, '#play_maps_section_tooltip_' + type, '' );
-			} );
 		}
 
 		return elSectionContainer;
@@ -1250,7 +1508,8 @@ var PlayMenu = ( function()
 		m_activeMapGroupSelectionPanelID = panelID;
 		_ShowActiveMapSelectionTab( isEnabled );
 
-	};
+        _PopulateQuickSelectBar( isSearching, isHost );
+    };
 
 	var _SelectMapButtonsFromSettings = function( settings )
 	{
@@ -1318,12 +1577,13 @@ var PlayMenu = ( function()
 		btnCancel.enabled = ( isSearching && isHost );
 	};
 
-	var _UpdatePrimeBtn = function( isSearching, isHost, isPrime )
+	var _UpdatePrimeBtn = function( isSearching, isHost )
 	{
 		var elPrimePanel = $( '#PrimeStatusPanel' );
 		var elGetPrimeBtn = $( '#id-play-menu-get-prime' );
 		var elTooglePrimeBtn = $( '#id-play-menu-toggle-prime' );
 		var elTextNA = $('#PrimeStatusLabelNA');
+		var isPrime = m_serverPrimeSetting === 1 ? true : false;
 
 		                                                                                  
 		if ( !_IsPlayingOnValveOfficial() || !MyPersonaAPI.IsInventoryValid() )
@@ -1582,9 +1842,11 @@ var PlayMenu = ( function()
 
 		var childrenList = _GetMapListForServerTypeAndGameMode();
 
+		var bEnable = !isSearching && isHost;
+
 		childrenList.forEach(element => {
 			if ( !element.id.startsWith( "FriendLeaderboards" ) )
-			element.enabled = !isSearching && isHost; 
+			element.enabled = bEnable; 
 		});
 	};
 
@@ -1647,7 +1909,7 @@ var PlayMenu = ( function()
 	};
 
 	                                                         
-	var _GetSelectedMapsForServerTypeAndGameMode = function( serverType, gameMode )
+	var _GetSelectedMapsForServerTypeAndGameMode = function( serverType, gameMode, bDontToggleMaps = false )
 	{
 		var isPlayingOnValveOfficial = _IsValveOfficialServer( serverType );
 		                                                                         
@@ -1673,14 +1935,16 @@ var PlayMenu = ( function()
 					return mapName === strMapNameIndividual;
 				} );
 				if ( mapsWithThisName.length > 0 )
-				{
-					mapsWithThisName[ 0 ].checked = true;
+                {
+                    if ( !bDontToggleMaps )
+					    mapsWithThisName[ 0 ].checked = true;
 				}
 			} );
 
 			if ( aListMapPanels.length > 0 && !_CheckContainerHasAnyChildChecked( aListMapPanels ) )
-			{
-				aListMapPanels[ 0 ].checked = true;
+            {
+                if ( !bDontToggleMaps )
+				    aListMapPanels[ 0 ].checked = true;
 			}
 		}
 
@@ -1905,6 +2169,9 @@ var PlayMenu = ( function()
 		{	                                                                                     
 			MyPersonaAPI.HintLoadPipRanks( 'dangerzone' );
 		}
+		                                                                      
+		$.GetContextPanel().SwitchClass( "gamemode", m_gameModeSetting );
+		$.GetContextPanel().SwitchClass( "serversetting", m_serverSetting );
 
 		if ( !LobbyAPI.BIsHost() )
 		{
@@ -1937,14 +2204,9 @@ var PlayMenu = ( function()
 					mode: gameMode,
 					type: GetGameType( gameMode ),
 					mapgroupname: selectedMaps
-				},
+				}
 			}
 		};
-
-		if( MyPersonaAPI.IsInventoryValid() )
-		{
-			settings.update.Game.prime = _IsPrimeChecked();
-		}
 
 		                                                                                                                                      
 		                                                                                                                                      
@@ -1979,6 +2241,17 @@ var PlayMenu = ( function()
 		                                                                                          
 		LobbyAPI.UpdateSessionSettings( settings );
 	};
+
+	var ApplyPrimeSetting = function()
+	{
+		if( MyPersonaAPI.IsInventoryValid() )
+		{
+			var settings = { update: { Game: {}} };
+			settings.update.Game.prime = m_serverPrimeSetting === 1 ? false : true;
+			                                                 
+			LobbyAPI.UpdateSessionSettings( settings );
+		}
+	}
 
 	                                                                                                    
 	                                
@@ -2419,7 +2692,7 @@ var PlayMenu = ( function()
 
 	var _InventoryUpdated = function()
 	{
-		_UpdatePrimeBtn( _IsSearching(), LobbyAPI.BIsHost(), m_serverPrimeSetting === 1 );
+		_UpdatePrimeBtn( _IsSearching(), LobbyAPI.BIsHost());
 	}
 
 
@@ -2433,7 +2706,10 @@ var PlayMenu = ( function()
 		PlayTopNavDropdownChanged	: _PlayTopNavDropdownChanged,
 		BotDifficultyChanged		: _BotDifficultyChanged,
 		WorkshopSubscriptionsChanged: _WorkshopSubscriptionsChanged,
-		InventoryUpdated			: _InventoryUpdated
+		InventoryUpdated			: _InventoryUpdated,
+		SaveMapSelectionToCustomPreset: _SaveMapSelectionToCustomPreset,
+		OnMapQuickSelect			: _OnMapQuickSelect
+
 	};
 
 } )();
