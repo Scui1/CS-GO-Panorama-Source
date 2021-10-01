@@ -130,6 +130,9 @@ var MainMenu = ( function() {
 		                                                                          
 		_DeleteSurvivalEndOfMatch();
 
+		                                 
+		_DeletePauseMenuMissionPanel();
+
 		                                                               
 		_ShowHideAlertForNewEventForWatchBtn();
 
@@ -311,6 +314,9 @@ var MainMenu = ( function() {
 		                                                            
 		_UpdateSurvivalEndOfMatchInstance();
 
+		                                               
+		_AddPauseMenuMissionPanel();
+
 		                
 		_OnHomeButtonPressed();
 	};
@@ -318,7 +324,9 @@ var MainMenu = ( function() {
 	var _OnHidePauseMenu = function ()
 	{
 		$.GetContextPanel().RemoveClass( 'MainMenuRootPanel--PauseMenuMode' );
-
+		                                 
+		_DeletePauseMenuMissionPanel();
+		                                                                  
 		_OnHomeButtonPressed();
 	};
 
@@ -701,14 +709,18 @@ var MainMenu = ( function() {
 		};
 
 		                            
-		var bFeaturedPanelIsActive = false;
+		var bFeaturedPanelIsActive = true;
 		
 		if ( bFeaturedPanelIsActive )
 		{
 			_AddFeaturedPanel();
 		}
+		                                                                           
+		if ( !_m_bPerfectWorld )
+		{
+			_AddWatchNoticePanel();
+		}
 		
-		_AddWatchNoticePanel();	                             
 		_ShowNewsAndStore();
 	};
 
@@ -764,8 +776,11 @@ var MainMenu = ( function() {
 	
 	var _ShowNewsAndStore = function ()
 	{
-		var elNews = $.FindChildInContext( '#JsNewsContainer' );
-		elNews.SetHasClass( 'hidden', false );
+		var elPanel = $.FindChildInContext( '#JsNewsContainer' );
+		elPanel.SetHasClass( 'hidden', false );
+
+		elPanel = $.FindChildInContext( '#JsActiveMissionPanel' );
+		elPanel.SetHasClass( 'hidden', false );
 
 		var elVanityButton = $.FindChildInContext( '#VanityControls' );
 		if ( elVanityButton )
@@ -777,8 +792,11 @@ var MainMenu = ( function() {
 
 	var _HideNewsAndStore = function ()
 	{
-		var elNews = $.FindChildInContext( '#JsNewsContainer' );
-		elNews.SetHasClass( 'hidden', true );
+		var elPanel = $.FindChildInContext( '#JsNewsContainer' );
+		elPanel.SetHasClass( 'hidden', true );
+
+		elPanel = $.FindChildInContext( '#JsActiveMissionPanel' );
+		elPanel.SetHasClass( 'hidden', true );
 
 		var elVanityButton = $.FindChildInContext( '#VanityControls' );
 
@@ -788,6 +806,7 @@ var MainMenu = ( function() {
 		}
 
 	};
+
 
 	                                                                
 	                                                             
@@ -1312,7 +1331,7 @@ var MainMenu = ( function() {
 
 	function _GetNotificationBarData()
 	{
-		var notification = { color_class: "", title: "", tooltip: "" };
+		var notification = { color_class: "", title: "", tooltip: "", link: "" };
 
 		if ( LicenseUtil.GetCurrentLicenseRestrictions() === false )
 		{
@@ -1350,11 +1369,13 @@ var MainMenu = ( function() {
 			{
 				notification.title = $.Localize( "#SFUI_MainMenu_Vac_Title" );
 				notification.tooltip = $.Localize( "#SFUI_MainMenu_Vac_Info" );
+				notification.link = "https://help.steampowered.com/faqs/view/647C-5CC1-7EA9-3C29";
 			}
 			else
 			{
 				notification.title = $.Localize( "#SFUI_MainMenu_GameBan_Title" );
 				notification.tooltip = $.Localize( "#SFUI_MainMenu_GameBan_Info" );
+				notification.link = "https://help.steampowered.com/faqs/view/4E54-0B96-D0A4-1557";
 			}
 			
 			return notification;
@@ -1398,9 +1419,16 @@ var MainMenu = ( function() {
 			}
 			
 			                                                                                                                
-			if ( nBanRemaining <= 49*24*3600 )
+			                                    
+			if ( !CompetitiveMatchAPI.CooldownIsPermanent() )
 			{
-				notification.title = notification.title + ' ' + FormatText.SecondsToSignificantTimeString( nBanRemaining );
+				var title = notification.title;
+
+				if ( CompetitiveMatchAPI.ShowFairPlayGuidelinesForCooldown() )
+				{
+					notification.link = "https://blog.counter-strike.net/index.php/fair-play-guidelines/";
+				}
+				notification.title = title + ' ' + FormatText.SecondsToSignificantTimeString( nBanRemaining );
 			}
 
 			return notification;
@@ -1426,7 +1454,15 @@ var MainMenu = ( function() {
 
 		                         
 		if ( notification !== null )
-		{
+		{			
+			if ( notification.link )
+			{
+				var btnClickableLink = $.FindChildInContext( '#ClickableLinkButton' );
+				btnClickableLink.enabled = true;
+				btnClickableLink.SetPanelEvent( 'onactivate', _ => SteamOverlayAPI.OpenUrlInOverlayOrExternalBrowser(notification.link) );
+				notification.title = "<span class='fairplay-link'>" + notification.title + "</span>";
+			}
+			
 			$.FindChildInContext( '#MainMenuNotificationTitle' ).text = notification.title;
 		}
 
@@ -1574,10 +1610,10 @@ var MainMenu = ( function() {
 		var elCoverPlaque = $( '#MainMenuFullScreenBlackCoverPlaque' );
 		if ( elCoverPlaque )
 			elCoverPlaque.visible = false;
-			
-		return;                                                                                                  
+		
+		                                                                                                            
 
-		var setVersionTo = '2';
+		var setVersionTo = '2109';                                       
 		var currentVersion = GameInterfaceAPI.GetSettingString( 'ui_popup_weaponupdate_version' );
 
 		if ( currentVersion !== setVersionTo )
@@ -1609,8 +1645,48 @@ var MainMenu = ( function() {
 			'',
 			'none'
 		);
-	}; 
-	
+	};
+
+	                                                                                                    
+	                         
+	                                                                                                    
+	function _AddPauseMenuMissionPanel()
+	{
+		var elPanel = null;
+		var missionId = GameStateAPI.GetActiveQuestID();
+
+		                                                         
+		var oGameState = GameStateAPI.GetTimeDataJSO();
+		
+		if ( !$.GetContextPanel().FindChildInLayoutFile( 'JsActiveMission' ) && missionId && oGameState && oGameState.gamephase !== 5 )
+		{
+			elPanel = $.CreatePanel( 
+				'Panel', 
+				$( '#JsActiveMissionPanel' ),
+				'JsActiveMission',
+				{ class: 'PauseMenuModeOnly' });
+				
+			elPanel.BLoadLayout('file://{resources}/layout/operation/operation_active_mission.xml', false, false );
+		}
+		else
+		{
+			elPanel = $.GetContextPanel().FindChildInLayoutFile( 'JsActiveMission' );
+		}
+
+		if( missionId && elPanel && elPanel.IsValid() )
+		{
+			elPanel.SetAttributeString( 'missionid', missionId );
+		}
+	}
+
+	function _DeletePauseMenuMissionPanel()
+	{
+		if( $.GetContextPanel().FindChildInLayoutFile( 'JsActiveMission' ) )
+		{
+			$.GetContextPanel().FindChildInLayoutFile( 'JsActiveMission' ).DeleteAsync( 0.0 );
+		}
+	}
+
 	                                                                                                    
 	                                                
 	                                                                                                    

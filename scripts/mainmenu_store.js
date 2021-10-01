@@ -29,7 +29,7 @@ var MainMenuStore = ( function()
 
 		                                                   
 		var nSeasonIndex = GameTypesAPI.GetActiveSeasionIndexValue();
-		nSeasonIndex = null;                                                                                              
+		                                                          
 		OperationUtil.ValidateOperationInfo( nSeasonIndex );
 		var oStatus = OperationUtil.GetOperationInfo();
 
@@ -241,66 +241,70 @@ var MainMenuStore = ( function()
 					
 					function GetRandomItem ( aItemList )
 					{
-						var min = 0;
-						var max = aItemList.length - 1;
-						
-						return aItemList[Math.floor(Math.random() * (max - min + 1) + min)];
+						return aItemList[ _GetRandom( 0, aItemList.length ) ];
 					}
 
-					function GetRandomIds( aItemIds, nNeeded )
+					function GetRandomlyTrimmedArray( aItemList, nNeeded )
 					{
-						var aIndexes = [];
-
-						for ( var i = 0; i < nNeeded; i++ )
+						var aIndexes = aItemList;
+						while ( aIndexes.length > 0 && aIndexes.length > nNeeded )
 						{
-							var temp = GetRandomItem( aItemIds );
-
-							if( aIndexes.indexOf( temp ) > -1 )
-							{
-								var count = 0;
-								while( aIndexes.indexOf( temp ) > -1 && count < 15 )
-								{
-									temp = GetRandomItem( aItemIds );
-									count++;
-								}
-							}
-
-							aIndexes.push( temp );
+							aIndexes.splice( _GetRandom( 0, aIndexes.length ), 1 );
 						}
-
 						return aIndexes;
 					}
 
 					var aCharItemIds = [];
-					var aItemIds = [];
+					var aItemIdsByType = {};
 
-					if( aRewards && ( aRewards.length > 0 ))
+					                                                               
+
+					if( aRewards && ( aRewards.length > 0 ) )
 					{
-						aRewards.forEach( function ( reward, index ) {
+						aRewards.forEach( function ( reward ) {
 							                         
 							if ( reward.containerType === "isCharacterLootlist" )
 							{
-								reward.lootlist.forEach( function ( id ) {
-									aCharItemIds.push( id );
-								});
+								var lli = GetRandomItem( reward.lootlist );
+								                                                                                                             
+								aCharItemIds.push( lli );
 							}
 							else if ( reward.containerType !== "isGraffitiBox" )
 							{
-								reward.lootlist.forEach( function ( id ) {
-									aItemIds.push( id );
-								});
+								if ( !aItemIdsByType.hasOwnProperty( reward.containerType ) )
+								{
+									                                                                            
+									aItemIdsByType[ reward.containerType ] = [];
+								}
+								var lli = GetRandomItem( reward.lootlist );
+								                                                                                                             
+								aItemIdsByType[ reward.containerType ].push( lli );
 							}
 						});
+						
+						var aItemIds = [];                                                      
+						Object.values( aItemIdsByType ).forEach( val => {
+							GetRandomlyTrimmedArray( val, 2 ).forEach( subitemid => {
+								                                                                                       
+								aItemIds.push( subitemid );
+							} );
+						} );
 
-						var aIds = GetRandomIds( aCharItemIds, 2 );
-						elpanel.FindChildInLayoutFile( 'id-store-operation-char0' ).itemid = aIds[0];
-						elpanel.FindChildInLayoutFile( 'id-store-operation-char1' ).itemid = aIds[1];
+						var aIds = GetRandomlyTrimmedArray( aCharItemIds, 2 );
+						for ( var idxstoretile = 0; idxstoretile < aIds.length; ++ idxstoretile )
+						{
+							elpanel.FindChildInLayoutFile( 'id-store-operation-char' + idxstoretile ).itemid = aIds[idxstoretile];
+							                                                                                                                                         
+						}
 
-						aIds= [];
-						aIds = GetRandomIds( aItemIds, 3 );
-						elpanel.FindChildInLayoutFile( 'id-store-operation-item0' ).itemid = aIds[0];
-						elpanel.FindChildInLayoutFile( 'id-store-operation-item1' ).itemid = aIds[1];
-						elpanel.FindChildInLayoutFile( 'id-store-operation-item2' ).itemid = aIds[2];
+						aIds = GetRandomlyTrimmedArray( aItemIds, 3 );
+						for ( var idxstoretile = 0; idxstoretile < aIds.length; ++ idxstoretile )
+						{
+							elpanel.FindChildInLayoutFile( 'id-store-operation-item' + idxstoretile ).itemid = aIds[idxstoretile];
+							                                                                                                                                    
+						}
+
+						                                                               
 
 						var elBalance = m_elStore.FindChildInLayoutFile( 'id-store-operation-balance-container' );
 						var isPremium = OperationUtil.GetOperationInfo().bPremiumUser;
@@ -449,16 +453,16 @@ var MainMenuStore = ( function()
 				var getNameId = '';
 				var obj = itemsByCategory.coupons[j];
 				                                           
-				if( typeof obj === "object" && obj.linkedid )
+				if( typeof obj === "object" )
 				{
-					getNameId = obj.linkedid;
+					getNameId = obj.linkedid ? obj.linkedid : obj.id;
 				}
 				else
 				{
 					getNameId = obj;
 				}
 				
-				var strItemName = ItemInfo.GetName( getNameId );
+				var strItemName = getNameId ? ItemInfo.GetName( getNameId ) : '';                                                
 				if ( !strItemName ) continue;
 				strItemName = strItemName.toLowerCase();
 
@@ -548,10 +552,14 @@ var MainMenuStore = ( function()
 			itemsByCategory = {};
 		}
 	
+		                                              
 		for ( var i = 0; i < count; i++ )
 		{
 			var ItemId = StoreAPI.GetBannerEntryDefIdx( i );
 			var FauxItemId = InventoryAPI.GetFauxItemIDFromDefAndPaintIndex( ItemId, 0 );
+			var strBannerEntryCustomFormatString = "";                           
+
+			                                                                                                   
 
 			                                     
 			if ( !bPerfectWorld &&
@@ -575,19 +583,22 @@ var MainMenuStore = ( function()
 				
 				itemsByCategory.market.push( FauxItemId );
 			}
-			else if ( StoreAPI.GetBannerEntryCustomFormatString( i ) === "new" )
-			{
-				if ( !_BAllowDisplayingItemInStore( FauxItemId ) )
-					continue;
-
-				if ( !itemsByCategory.newstore )
-				{
-					itemsByCategory.newstore = [];
-				}
-				
-				itemsByCategory.newstore.push( FauxItemId );
-			}
-			else if ( StoreAPI.GetBannerEntryCustomFormatString( i ) === "coupon" )
+			                                                                      
+			                                                                        
+			                                                             
+			   
+			  	                                                  
+			  		         
+			  
+			  	                                
+			  	 
+			  		                              
+			  	 
+			  	
+			  	                                            
+			   
+			                                                                                          
+			else if ( ( strBannerEntryCustomFormatString = StoreAPI.GetBannerEntryCustomFormatString( i ) ).startsWith( "coupon" ) )
 			{
 				if ( !_BAllowDisplayingItemInStore( FauxItemId ) )
 					continue;
@@ -623,6 +634,10 @@ var MainMenuStore = ( function()
 					var LinkedItemId = InventoryAPI.GetFauxItemIDFromDefAndPaintIndex( parseInt( sLinkedCoupon ), 0 );
 					                                                                                                                              
 					itemsByCategory.coupons.push( { id:FauxItemId, linkedid: LinkedItemId, snippet_name: 'LinkedStoreEntry' } );
+				}
+				else if ( strBannerEntryCustomFormatString === "coupon_new" )
+				{
+					itemsByCategory.coupons.push( { id:FauxItemId, activationType: 'newstore', isNewRelease: true } );
 				}
 				else
 				{
@@ -873,8 +888,13 @@ var MainMenuStore = ( function()
 
 			elItem.BLoadLayout( "file://{resources}/layout/mainmenu_store_tile.xml", false, false );
 		}
-		                                                        
-		else if( typeof itemList[ i ] === "object" && type === "coupons" && itemList[ i ].linkedid )
+		  
+		                                                                     
+		                                                                                        
+		                                                                                             
+		  
+		                                                              
+		else if( typeof itemList[ i ] === "object" && type === "coupons" && itemList[ i ].snippet_name && itemList[ i ].linkedid )
 		{
 			elItem.BLoadLayoutSnippet( itemList[ i ].snippet_name );
 			var oItemIds = { 
@@ -885,10 +905,29 @@ var MainMenuStore = ( function()
 			_FillOutLinkedItemData( elItem, oItemIds );
 			_SetOnActivateEventLinkedItemTile( elItem, oItemIds );
 		}
-		                                                    
-		else if ( typeof itemList[ i ] == "object" && elItem.BLoadLayoutSnippet( itemList[ i ].snippet_name ) )
+		                             
+		else if ( typeof itemList[ i ] == "object" && itemList[ i ].snippet_name && elItem.BLoadLayoutSnippet( itemList[ i ].snippet_name ) )
 		{
 			itemList[ i ].load_func( elItem );
+		}
+		         
+		else if( typeof itemList[ i ] === "object" && type === "coupons" )
+		{
+			elItem.Data().oData = {
+				id: itemList[ i ].id,
+				activationType: itemList[ i ].activationType,
+				isNewRelease: itemList[ i ].isNewRelease
+			}
+
+			elItem.BLoadLayout( "file://{resources}/layout/mainmenu_store_tile.xml", false, false );
+		}
+		                                 
+		else
+		{
+			                                                                                                        
+			          
+			                                    
+			          
 		}
 
 		if ( i % itemsPerPage === 0 )
@@ -1072,11 +1111,13 @@ var MainMenuStore = ( function()
 		 
 		  
 
+		                                                    
 		                                                                                                                  
-		var nCategoryIdx = Math.floor( Math.random() * 3 );
-		fnMoveToFront( tabelements[nCategoryIdx] );
-		var nCategoryIdx2 = Math.floor( Math.random() * 2 );
-		fnMoveToFront( tabelements[ nCategoryIdx2 + ( ( nCategoryIdx2 >= nCategoryIdx ) ? 1 : 0 ) ] );
+		                                                   
+		                                           
+		                                                    
+		                                                                                              
+		  
 
 		_SetDefaultTabActive( elParent.Children()[0] )
 	};

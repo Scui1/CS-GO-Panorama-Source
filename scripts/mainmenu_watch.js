@@ -98,7 +98,8 @@ var mainmenu_watch = ( function()
 				elStreamPanel.SetDialogVariable( "channel", StreamsAPI.GetStreamDisplayNameByName( streamName ) );
 
 				elStreamPanel.FindChildTraverse( "TwitchThumb" ).SetImage( StreamsAPI.GetStreamPreviewImageByName( streamName ) );
-				elStreamPanel.FindChildTraverse( "flag" ).SetImage( "file://{images}/flags/" + streamCountry + ".png" );
+				CommonUtil.SetLanguageOnLabel( streamCountry, elStreamPanel );
+
 
 				elStreamPanel.SetPanelEvent( 'onactivate', _SendToTwitch.bind( undefined, streamName ) );
 			}
@@ -267,10 +268,6 @@ var mainmenu_watch = ( function()
 			case "JsDownloaded":
 			case "JsLive":
 				matchList.UpdateMatchList( elTab, MATCHLISTDESCRIPTOR[ elTab.id ], optbFromMatchListChangeEvent );
-				if ( _m_activeTab.activeMatchInfoPanel )
-				{
-					matchInfo.ResizeRoundStatBars( _m_activeTab.activeMatchInfoPanel );
-				}
 				break;
 			case "JsEvents":
 				TournamentsAPI.RequestTournaments();
@@ -509,19 +506,6 @@ var mainmenu_watch = ( function()
 		_InitResourceManagement( elTab );
 	}
 
-	function _Refresh ( tabid )
-	{
-		if ( tabid === 'JsWatch' )
-		{
-			if ( _m_activeTab )
-			{
-				if ( _m_activeTab.activeMatchInfoPanel )
-				{
-					matchInfo.ResizeRoundStatBars( _m_activeTab.activeMatchInfoPanel );
-				}
-			}
-		}
-	}
 
 
 	                                                                                                                                                                     
@@ -535,7 +519,6 @@ var mainmenu_watch = ( function()
 		$.RegisterForUnhandledEvent( "PanoramaComponent_MatchList_StateChange", _UpdateMatchListFromMatchListChangeEvent );
 		$.RegisterForUnhandledEvent( "CloseSubMenuContent", _CloseSubMenuContent );
 		$.RegisterForUnhandledEvent( "NavigateToTab", _NavigateToTab );
-		$.RegisterForUnhandledEvent( "MainMenuTabShown", _Refresh );
 		_InitTab( 'JsYourMatches' );
 		_InitTab( 'JsDownloaded' )
 		_InitTab( 'JsLive' );
@@ -543,8 +526,22 @@ var mainmenu_watch = ( function()
 
 		$.GetContextPanel().Data().elMainMenuRoot;
 
-		_InitResourceManagement( $( '#JsStreams' ) );
-		_InitResourceManagement( $( '#JsEvents' ) );
+		                                             
+		if ( _m_bPerfectWorld )
+		{
+			var elWatchNavBarButtonStreams = $( '#WatchNavBarButtonStreams' );
+			if ( elWatchNavBarButtonStreams )
+				elWatchNavBarButtonStreams.DeleteAsync( .0 );
+
+			var elWatchNavBarButtonStreams = $( '#WatchNavBarButtonEvents' );
+			if ( elWatchNavBarButtonStreams )
+				elWatchNavBarButtonStreams.DeleteAsync( .0 );
+		}
+		else
+		{
+			_InitResourceManagement( $( '#JsStreams' ) );
+			_InitResourceManagement( $( '#JsEvents' ) );
+		}
 
 		var restrictions = LicenseUtil.GetCurrentLicenseRestrictions();
 		if ( restrictions === false )
