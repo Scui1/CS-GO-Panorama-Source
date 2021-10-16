@@ -553,9 +553,6 @@ var matchInfo = ( function() {
 
         if ( ( totalBars === 0 ) && ( totalRounds > 30 ) )
         {
-                                                                          
-            elTickLabels.FindChildInLayoutFile('id-mi-tick-label--last').AddClass( 'hide' );
-
             var elOTStartContainer = $.CreatePanel( 'Panel', elTickLabels, "" );
             var elOTStart = $.CreatePanel( 'Label', elOTStartContainer, "" );
             elOTStart.AddClass( 'mi-tick-label' );
