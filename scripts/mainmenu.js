@@ -26,6 +26,9 @@ var MainMenu = ( function() {
 
 	var _m_hOnEngineSoundSystemsRunningRegisterHandle = null;
 
+	var _m_jobFetchTournamentData = null;
+	const TOURNAMENT_FETCH_DELAY = 10;
+
 	                                         
 	let nNumNewSettings = UpdateSettingsMenuAlert();
 
@@ -71,6 +74,32 @@ var MainMenu = ( function() {
 			}
 		}
 	};
+
+	function _FetchTournamentData ()
+	{
+		                                         
+
+		                                                             
+		if ( _m_jobFetchTournamentData )
+			return;
+		
+		TournamentsAPI.RequestTournaments();
+			
+		_m_jobFetchTournamentData = $.Schedule( TOURNAMENT_FETCH_DELAY, function ()
+		{
+			_m_jobFetchTournamentData = null;
+			_FetchTournamentData();
+		} );
+	}
+
+	function _StopFetchingTournamentData ()
+	{
+		if ( _m_jobFetchTournamentData )
+		{
+			$.CancelScheduled( _m_jobFetchTournamentData );
+			_m_jobFetchTournamentData = null;
+		}
+	}
 
 	var _SetBackgroundMovie = function()
 	{
@@ -137,7 +166,9 @@ var MainMenu = ( function() {
 		_ShowHideAlertForNewEventForWatchBtn();
 
 		                                                         
-		_UpdateUnlockCompAlert()
+		_UpdateUnlockCompAlert();
+
+		_FetchTournamentData();
 	};
 
 	var _TournamentDraftUpdate = function ()
@@ -279,6 +310,8 @@ var MainMenu = ( function() {
 		_CancelNotificationSchedule();
 
 		UiToolkitAPI.CloseAllVisiblePopups();
+
+		_StopFetchingTournamentData();
 	};
 
 	var _OnShowPauseMenu = function()
@@ -713,33 +746,29 @@ var MainMenu = ( function() {
 		
 		if ( bFeaturedPanelIsActive )
 		{
-			_AddFeaturedPanel();
+			                                                                                
+			                                                                                 
+			_AddFeaturedPanel( 'operation/operation_mainmenu.xml', 'JsOperationPanel' );
 		}
 		                                                                           
-		if ( !_m_bPerfectWorld )
-		{
+		                          
+		    
 			_AddWatchNoticePanel();
-		}
+		    
 		
 		_ShowNewsAndStore();
 	};
 
 	var _AddStream = function()
 	{
-		var elStream = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsNewsContainer' ), 'JsStreamPanel' );
+		var elStream = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsStreamContainer' ), 'JsStreamPanel' );
 		elStream.BLoadLayout( 'file://{resources}/layout/mainmenu_stream.xml', false, false );
 	};
 
-	var _AddFeaturedPanel = function()
+	var _AddFeaturedPanel = function( xmlPath, panelId )
 	{
-		                        
-		                                                                       
-		                                                                                     
-		      
-
-		                  
-		var featuredXML = 'file://{resources}/layout/operation/operation_mainmenu.xml';
-		var elPanel = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsNewsContainer' ), 'JsFeaturedPanel' );
+		var featuredXML = 'file://{resources}/layout/' + xmlPath;
+		var elPanel = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsNewsContainer' ), panelId );
 		elPanel.BLoadLayout( featuredXML, false, false );
 
 		$.FindChildInContext( '#JsNewsContainer' ).MoveChildBefore( elPanel, $.FindChildInContext( '#JsNewsPanel' ) );
@@ -788,6 +817,10 @@ var MainMenu = ( function() {
 			elVanityButton.visible = true;
 		}
 
+		
+		elPanel = $.FindChildInContext( '#JsStreamContainer' );
+		elPanel.SetHasClass( 'hidden', false );
+
 	};
 
 	var _HideNewsAndStore = function ()
@@ -805,8 +838,9 @@ var MainMenu = ( function() {
 			elVanityButton.visible = false;
 		}
 
+		elPanel = $.FindChildInContext( '#JsStreamContainer' );
+		elPanel.SetHasClass( 'hidden', true );
 	};
-
 
 	                                                                
 	                                                             
@@ -1160,11 +1194,12 @@ var MainMenu = ( function() {
 		var caseId = ParamsList[ 1 ];
 		var storeId = ParamsList[ 2 ];
 		var blurOperationPanel = ParamsList[ 3 ];
+		var extrapopupfullscreenstyle = ParamsList[ 4 ];
 		                                                                                    
-		var aParamsForCallback = ParamsList.slice( 4 );
+		var aParamsForCallback = ParamsList.slice( 5);
 		var showMarketLinkDefault = _m_bPerfectWorld ? 'false' : 'true';
 
-		JsInspectCallback = UiToolkitAPI.RegisterJSCallback( _OpenDecodeAfterInspect.bind( undefined, keyId, caseId, storeId, aParamsForCallback ) );
+		JsInspectCallback = UiToolkitAPI.RegisterJSCallback( _OpenDecodeAfterInspect.bind( undefined, keyId, caseId, storeId, extrapopupfullscreenstyle, aParamsForCallback ) );
 
 		UiToolkitAPI.ShowCustomLayoutPopupParameters(
 			'',
@@ -1175,13 +1210,14 @@ var MainMenu = ( function() {
 			'&' + 'showequip=false' +
 			'&' + 'showitemcert=false' +
 			'&' + blurOperationPanel +
+			'&' + 'extrapopupfullscreenstyle=' + extrapopupfullscreenstyle +
 			'&' + 'showmarketlink=' + showMarketLinkDefault +
 			'&' + 'callback=' + JsInspectCallback,
 			'none'
 		);
 	};
 
-	var _OpenDecodeAfterInspect = function( keyId, caseId, storeId, aParamsForCallback )
+	var _OpenDecodeAfterInspect = function( keyId, caseId, storeId, extrapopupfullscreenstyle, aParamsForCallback )
 	{
 		                                                                                                               
 		                                                                                    
@@ -1189,8 +1225,9 @@ var MainMenu = ( function() {
 		var backtostoreiteminspectsettings = storeId ?
 			'&' + 'asyncworkitemwarning=no' +
 			'&' + 'asyncforcehide=true' +
-			'&' + 'storeitemid=' + storeId :
-			'';
+			'&' + 'storeitemid=' + storeId +
+			'&' + 'extrapopupfullscreenstyle=' + extrapopupfullscreenstyle
+			: '';
 
 		var backtodecodeparams = aParamsForCallback.length > 0 ?
 		'&' + aParamsForCallback.join( '&' ) : 

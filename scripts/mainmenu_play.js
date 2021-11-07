@@ -2792,7 +2792,7 @@ var PlayMenu = ( function()
 		else
 		{
 			selectedMaps = _GetSelectedMapsForServerTypeAndGameMode( serverType, gameMode );
-		}
+		}	
 
 		var settings = {
 			update: {

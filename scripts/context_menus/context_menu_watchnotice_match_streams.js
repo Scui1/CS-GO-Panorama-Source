@@ -6,6 +6,7 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 	var _m_cP = $.GetContextPanel();
 	var _m_myCountryCode = undefined;
 	var _m_oPriorityMap = {};
+	var _m_isOfficial = false;
 
 
 	function _Init()
@@ -13,14 +14,13 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 		$.RegisterForUnhandledEvent( 'Tournaments_RequestMatch_Response', _RequestMatchString_Received);
 
 		var matchId = _m_cP.GetAttributeString( "match_id", "" );
+		_m_isOfficial = ( _m_cP.GetAttributeString( "is_official", "" ) === 'true' ) ? true : false;
 
 		                                                                      
 		$.DispatchEvent( 'Tournaments_RequestMatch', matchId );
 
 		_m_cP.SetFocus();
 	}
-
-
 
 
 	                                                        
@@ -59,8 +59,18 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 	function _RequestMatchString_Received( matchString )
 	{
 		if ( _m_arrStreams != undefined )
+		{
+			$.DispatchEvent( 'ContextMenuEvent', '' );
 			return;
-			
+		}
+		
+		var elStreamContainer = $.GetContextPanel().FindChildTraverse( 'id-watchnotice__event__match__stream-container' );
+		if ( elStreamContainer == undefined || !elStreamContainer.IsValid() )
+		{
+			$.DispatchEvent( 'ContextMenuEvent', '' );
+			return;
+		}
+
 		var oMatch = JSON.parse( matchString );
 		
 		if ( oMatch == undefined )
@@ -80,7 +90,7 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 
 		_m_myCountryCode = MyPersonaAPI.GetMyCountryCode().toLowerCase();
 
-		_SortStreams( _m_arrStreams );
+		                                
 		
 		for ( var jdx in _m_arrStreams )
 		{
@@ -89,10 +99,23 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 			var countryCode = oStream.iso;
 			var languageCode = oStream.hasOwnProperty( 'language' ) ? oStream.language : "";
 
-			                           
-			var elStreamContainer = $.GetContextPanel().FindChildTraverse( 'id-watchnotice__event__match__stream-container' );
+			       
+			var bIsGotv = oStream[ 'site' ].toLowerCase() === "gotv";
+			var elGotvBtn = $.GetContextPanel().FindChildTraverse( "id-watchnotice__event__match_gotv" );
 
-			if ( elStreamContainer != undefined && elStreamContainer.IsValid() )
+			if ( bIsGotv )
+			{
+				var onActivate = function ( url )
+				{
+					StoreAPI.RecordUIEvent( "WatchNoticeSchedMatchLink" );
+					GameInterfaceAPI.ConsoleCommand( 'playcast "' + url + '"' );
+					$.DispatchEvent( 'ContextMenuEvent', '' );
+				}
+
+				elGotvBtn.SetPanelEvent( 'onactivate', onActivate.bind( undefined, oStream[ 'resolved_embed' ] ) );
+				elGotvBtn.visible = true;
+			}
+			else
 			{
 				var elStream = $.CreatePanel( 'Button', elStreamContainer, oStream[ 'stream_id' ] );
 				                                                                                           
@@ -115,19 +138,19 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 
 					if ( oStream[ 'resolved_embed' ].search( "channel=" ) != -1 )
 					{
-						streamName = "Twitch: " + oStream[ 'resolved_embed' ].match("channel=(.*?(?=&))")[1];
+						streamName = "Twitch: " + oStream[ 'resolved_embed' ].match( "channel=(.*?(?=&))" )[ 1 ];
 					}
 					else if ( oStream[ 'site' ].toLowerCase().search( "youtube" ) != -1 )
 					{
 						streamName = "YouTube";
 					}
-						
+					
 					elStreamName.SetDialogVariable( 'stream_site', streamName );
 				}
 
 				var url = oStream[ 'resolved_embed' ];
-				
-				var onActivate = function( url )
+			
+				var onActivate = function ( url )
 				{
 					StoreAPI.RecordUIEvent( "WatchNoticeSchedMatchView" );
 					SteamOverlayAPI.OpenUrlInOverlayOrExternalBrowser( url );
@@ -136,7 +159,6 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 
 				elStream.SetPanelEvent( 'onactivate', onActivate.bind( undefined, url ) );
 			}
-
 		}
 
 		      
@@ -148,13 +170,12 @@ var ContextMenuWatchNoticeMatchStream = (function () {
 			var onActivate = function ( url )
 			{
 				StoreAPI.RecordUIEvent( "WatchNoticeSchedMatchLink" );
-				SteamOverlayAPI.OpenUrlInOverlayOrExternalBrowser( url ); 
+				SteamOverlayAPI.OpenUrlInOverlayOrExternalBrowser( url );
+				$.DispatchEvent( 'ContextMenuEvent', '' );
 			}
 
 			elLinkBtn.SetPanelEvent( 'onactivate', onActivate.bind( undefined, url ) );
 		}
-
-
 	};
 
 	

@@ -33,6 +33,13 @@
 
 		<Panel class="contextmenu-watchnotice_match_streams__divider" />
 
+		<Button id="id-watchnotice__event__match_gotv" class="contextmenu-watchnotice_match_streams__url-link gotv" style="visibility:collapse;">
+			<Image class="WideLogoStreamGOTV" src="file://{images}/browser/streamgotv.svg" defaultsrc="" textureheight="40" texturewidth="-1" />
+			<Label text="#eventsched_watch_on_gotv" />
+		</Button>
+
+		<Panel class="contextmenu-watchnotice_match_streams__divider" />
+
 		<Button id="id-watchnotice__event__match__no-stream" class="hidden contextmenu-watchnotice_match_streams__url-link">
 			<Label text="#eventsched_no_streams" />
 		</Button>
