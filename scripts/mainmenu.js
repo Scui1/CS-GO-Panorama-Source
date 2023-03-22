@@ -155,6 +155,7 @@ var MainMenu = ( function() {
 
 		                              
 		_GcLogonNotificationReceived();
+		_BetaEnrollmentStatusChange();
 
 		                                                                          
 		_DeleteSurvivalEndOfMatch();
@@ -296,6 +297,17 @@ var MainMenu = ( function() {
 		                                                                     
 		_m_bGcLogonNotificationReceivedOnce = false;
 		_GcLogonNotificationReceived();
+	}
+
+	var _BetaEnrollmentStatusChange = function ()
+	{
+		                                                                  
+		let strMyBetaStatus = MyPersonaAPI.GetMyBetaEnrollmentStatus();
+		let bShowEnrollIntoBetaButton = ( strMyBetaStatus === 'eligible' );
+
+		var btn = $.FindChildInContext( '#JsLimitedTest' );
+		if ( btn && btn.IsValid() )
+			btn.SetHasClass( 'hidden', !bShowEnrollIntoBetaButton );
 	}
 
 	var _OnHideMainMenu = function ()
@@ -705,6 +717,12 @@ var MainMenu = ( function() {
 	{	
 		                             
 		_AddStream();
+
+		                             
+		var elLimitedTest = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsNewsContainer' ), 'JsLimitedTest' );
+		elLimitedTest.BLoadLayout( 'file://{resources}/layout/mainmenu_limitedtest.xml', false, false );
+
+		_BetaEnrollmentStatusChange();
 		
 		                             
 		var elNews = $.CreatePanel( 'Panel', $.FindChildInContext( '#JsNewsContainer' ), 'JsNewsPanel' );
@@ -1946,6 +1964,7 @@ var MainMenu = ( function() {
 		OnEscapeKeyPressed					: _OnEscapeKeyPressed,
 		GameMustExitNowForAntiAddiction		: _GameMustExitNowForAntiAddiction,
 		GcLogonNotificationReceived			: _GcLogonNotificationReceived,
+		BetaEnrollmentStatusChange			: _BetaEnrollmentStatusChange,
 		InventoryUpdated					: _InventoryUpdated,
 		LobbyPlayerUpdated					: _LobbyPlayerUpdated,
 		OnInventoryInspect					: _OnInventoryInspect,
@@ -2000,6 +2019,7 @@ var MainMenu = ( function() {
 	$.RegisterForUnhandledEvent( 'OpenSidebarPanel', MainMenu.ExpandSidebar);
 	$.RegisterForUnhandledEvent( 'PanoramaComponent_MyPersona_GameMustExitNowForAntiAddiction', MainMenu.GameMustExitNowForAntiAddiction );
 	$.RegisterForUnhandledEvent( 'PanoramaComponent_MyPersona_GcLogonNotificationReceived', MainMenu.GcLogonNotificationReceived );
+	$.RegisterForUnhandledEvent( 'PanoramaComponent_MyPersona_BetaEnrollmentStatusChange', MainMenu.BetaEnrollmentStatusChange );
 	$.RegisterForUnhandledEvent( 'PanoramaComponent_GC_Hello', MainMenu.UpdateUnlockCompAlert );
 	$.RegisterForUnhandledEvent( 'PanoramaComponent_MyPersona_InventoryUpdated', MainMenu.InventoryUpdated );
 	$.RegisterForUnhandledEvent( "PanoramaComponent_Lobby_MatchmakingSessionUpdate", MainMenu.LobbyPlayerUpdated );

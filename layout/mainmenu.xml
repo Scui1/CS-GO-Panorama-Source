@@ -44,7 +44,7 @@
 
 					<Panel id="VanityControls" hittest="true">
 						<Button id="VanityPanelGoToCharacterLoadout"
-							onactivate="$.DispatchEvent( 'MainMenu_OnGoToCharacterLoadoutPressed' )"> >
+							onactivate="$.DispatchEvent( 'MainMenu_OnGoToCharacterLoadoutPressed' )"> 
 							<Image textureheight="32" texturewidth="-1" src="file://{images}/icons/ui/tune.svg" />
 						</Button>
 					</Panel>
